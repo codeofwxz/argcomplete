@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-from collections.abc import Callable, Generator, Iterable, Mapping
+from collections.abc import Callable, Generator, Iterable
 from shlex import quote
 from typing import Final
 
@@ -34,12 +34,12 @@ class BaseCompleter:
 
 
 class ChoicesCompleter(BaseCompleter):
-    choices: Final[Mapping[str, str | bytes]]
+    choices: Final[Iterable[object]]
 
-    def __init__(self, choices: Mapping[str, str | bytes]) -> None:
+    def __init__(self, choices: Iterable[object]) -> None:
         self.choices = choices
 
-    def _convert(self, choice):
+    def _convert(self, choice: object) -> str:
         if not isinstance(choice, str):
             choice = str(choice)
         return choice
