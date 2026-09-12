@@ -372,6 +372,15 @@ class CompletionFinder:
                 return False
         return True
 
+    def _attached_action_allowed(self, action, parser):
+        # Keep dynamic dispatch so custom finders can impose their own rules.
+        previous = getattr(parser, "_completing_attached_value", False)
+        parser._completing_attached_value = True
+        try:
+            return self._action_allowed(action, parser)
+        finally:
+            parser._completing_attached_value = previous
+
     def _get_attached_short_option(self, parser, word):
         # Let argparse resolve exact option names and ambiguous abbreviations before
         # interpreting the remainder as a chain of short options and an argument.
@@ -434,7 +443,7 @@ class CompletionFinder:
                 attached_action, optional_prefix, cword_prefix, leading_options = attached
                 seen_actions = set()
                 for action in [item[0] for item in leading_options] + [attached_action]:
-                    if not self._action_allowed(action, parser) or any(
+                    if not self._attached_action_allowed(action, parser) or any(
                         conflict in seen_actions for conflict in parser._action_conflicts.get(action, [])
                     ):
                         return completions
@@ -695,6 +704,11 @@ class ExclusiveCompletionFinder(CompletionFinder):
     def _action_allowed(action, parser):
         if not CompletionFinder._action_allowed(action, parser):
             return False
+
+        # An explicitly typed option may need a value even when its name would
+        # be omitted from the suggestions for the next option.
+        if getattr(parser, "_completing_attached_value", False):
+            return True
 
         append_classes = (argparse._AppendAction, argparse._AppendConstAction)
         if action._orig_class in append_classes:
